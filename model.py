@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import pdb
 from model_utils import *
-from ucp import APF, FiLM, user_profile
+from ucp import APF, FiLM, MoPE, user_profile
 import random
 
 
@@ -99,19 +99,26 @@ class NewRec(torch.nn.Module):
 
         # built last and on a forked RNG, so the base layers get the same init as PrepRec
         self.film = None
-        if args.film:
-            with torch.random.fork_rng(devices=[]):
+        self.mope = None
+        with torch.random.fork_rng(devices=[]):
+            if args.film:
                 self.film = FiLM(2 * args.num_blocks, self.hidden_units)
+            if args.mope:
+                self.mope = MoPE(args.hidden_units)
 
     def log2feats(self, users, log_seqs, time1_seqs, time2_seqs, time_embed):
         # obtain popularity-based feature vectors for sequence history, apply embedding layer, add positional encoding
         seqs = self.popularity_enc(log_seqs, time1_seqs, time2_seqs)
-        if self.apf is not None or self.film is not None:
+        if self.apf is not None or self.film is not None or self.mope is not None:
             mask = torch.BoolTensor(log_seqs != 0).to(self.dev)
             self.profile = user_profile(seqs, mask, self.maxlen)
         if self.film is not None:
             self.film.set_profile(self.profile)
-        seqs = self.embed_layer(seqs)
+        # MoPE replaces the embedding for history items only; candidates keep embed_layer
+        if self.mope is not None:
+            seqs = self.mope(seqs, self.profile)
+        else:
+            seqs = self.embed_layer(seqs)
         if self.fs_emb:
             seqs = self.fs_layer(seqs) 
         if self.no_fixed_emb:
@@ -228,11 +235,16 @@ class NewRec(torch.nn.Module):
             self.apf.reset_output()
         if self.film is not None:
             self.film.reset_output()
+        if self.mope is not None:
+            self.mope.reset_output()
 
     def extra_loss(self, args):
-        if self.film is None:
-            return 0
-        return args.film_coef * self.film.reg_loss()
+        loss = 0
+        if self.film is not None:
+            loss = loss + args.film_coef * self.film.reg_loss()
+        if self.mope is not None:
+            loss = loss + args.mope_coef * self.mope.balance_loss()
+        return loss
 
     def user_score(self, log_seqs, time1_seqs, time2_seqs, time_embed, user):
         log_feats =  self.log2feats(user, log_seqs, time1_seqs, time2_seqs, time_embed)

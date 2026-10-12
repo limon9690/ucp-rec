@@ -2,18 +2,24 @@
 # Train one configuration on the source dataset for each seed, evaluate zero-shot
 # on the target datasets, and print mean ± sd.
 #
-#   nohup bash scripts/run_variant.sh preprec|apf|film
+#   nohup bash scripts/run_variant.sh preprec|apf|film|mope|full|all
 #
 # Training is skipped for a seed whose run already finished, so rerunning only
 # fills in what is missing. Results go to res/runs/<variant>/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-variant=${1:?usage: bash scripts/run_variant.sh preprec|apf|film}
+variant=${1:?usage: bash scripts/run_variant.sh preprec|apf|film|mope|full|all}
+if [[ $variant == all ]]; then
+  for v in preprec apf film mope full; do bash "$0" "$v"; done
+  exit
+fi
 case $variant in
   preprec) flags="" ;;
   apf) flags="--apf" ;;
   film) flags="--film" ;;
+  mope) flags="--mope" ;;
+  full) flags="--apf --film --mope" ;;
   *) echo "unknown variant: $variant"; exit 1 ;;
 esac
 

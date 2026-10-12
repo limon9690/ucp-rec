@@ -37,5 +37,7 @@ same_as_preprec() {
 check preprec "" 44950
 check apf "--apf" 45023
 check film "--film" 48614
+check mope "--mope" 72466
+check full "--apf --film --mope" 76203
 same_as_preprec film "--film"
-echo "SMOKE TEST PASSED (PrepRec 44950, APF 45023, FiLM 48614 parameters; untrained FiLM = PrepRec)"
+echo "SMOKE TEST PASSED (parameters: PrepRec 44950, APF 45023, FiLM 48614, MoPE 72466, full 76203; untrained FiLM = PrepRec)"

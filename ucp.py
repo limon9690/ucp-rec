@@ -1,4 +1,5 @@
 import torch
+from model_utils import InitFeedForward
 
 
 def coarse_percentile(feats, n_periods=12, n_bins=11):
@@ -120,3 +121,41 @@ class FiLM(torch.nn.Module):
     def reg_loss(self):
         # sum of squared deltas over all points, averaged over users
         return self.deltas.pow(2).sum(dim=(1, 2, 3)).mean()
+
+
+class MoPE(torch.nn.Module):
+    """Mixture of popularity experts for the history-item embeddings.
+
+    Each expert embeds one slice of the 138-dim popularity feature; a gate on
+    the user profile mixes them, with one set of weights per user.
+    In the coarse block, [0:11] is the oldest of the 12 periods and [121:132]
+    the current one, so E1/E2 see the 6 oldest periods and E3 the 6 most recent.
+    """
+
+    SLICES = [(132, 138), (0, 33), (33, 66), (66, 132)]
+
+    def __init__(self, d_model, profile_dim=7, hidden=8):
+        super().__init__()
+        self.experts = torch.nn.ModuleList(
+            [InitFeedForward(b - a, 2 * (b - a), d_model) for a, b in self.SLICES]
+        )
+        self.gate_fc1 = torch.nn.Linear(profile_dim, hidden)
+        self.gate_out = torch.nn.Linear(hidden, len(self.SLICES))
+        self.reset_output()
+        self.gates = None
+
+    def reset_output(self):
+        # uniform gate at the start of training
+        torch.nn.init.zeros_(self.gate_out.weight)
+        torch.nn.init.zeros_(self.gate_out.bias)
+
+    def forward(self, feats, profile):
+        """feats: (B, T, 138); profile: (B, 7) -> (B, T, d_model)"""
+        self.gates = torch.softmax(self.gate_out(torch.relu(self.gate_fc1(profile))), dim=-1)
+        outs = torch.stack([e(feats[..., a:b]) for e, (a, b) in zip(self.experts, self.SLICES)], dim=-1)
+        return (outs * self.gates[:, None, None, :]).sum(-1)
+
+    def balance_loss(self):
+        # equals 1 when the batch-average gate is uniform, K when one expert takes everything
+        k = self.gates.shape[-1]
+        return k * self.gates.mean(0).pow(2).sum()

@@ -129,6 +129,12 @@ def parse():
         "--film_coef", default=0.005, type=float, help="weight of the FiLM delta L2 loss"
     )
     parser.add_argument(
+        "--mope", action="store_true", help="UCP-Rec mixture of popularity experts"
+    )
+    parser.add_argument(
+        "--mope_coef", default=0.005, type=float, help="weight of the MoPE load-balancing loss"
+    )
+    parser.add_argument(
         "--keep_best",
         action="store_true",
         help="test and save the weights from the best validation epoch; upstream (and the thesis) used the final weights, because best_state aliased the live model",

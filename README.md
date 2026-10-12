@@ -57,11 +57,16 @@ To run a full configuration (seeds 2023–2025, trained on Office, zero-shot on 
 Music and Epinions) and get mean ± sd:
 
 ```bash
-nohup bash scripts/run_variant.sh film > film.out 2>&1 &   # or preprec, apf
+nohup bash scripts/run_variant.sh film > film.out 2>&1 &   # or preprec, apf, mope, full, all
 cat res/runs/film/summary.txt                              # when finished
 ```
 
 Seeds that already finished training are not retrained, only re-evaluated.
+
+## Notes
+
+- The modules are switched on with `--apf`, `--film` and `--mope`; all three together is the
+  full model. Their code is in `ucp.py`.
 
 ## Acknowledgements
 
