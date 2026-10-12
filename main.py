@@ -148,6 +148,9 @@ if second:
         except:
             pass
 
+if hasattr(model, "reset_personalization"):
+    model.reset_personalization()
+
 print(f"done {args.model} model setup!")
 n_trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"trainable parameters: {n_trainable}")

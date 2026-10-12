@@ -1,8 +1,4 @@
-#!/usr/bin/env bash
-# End-to-end check on synthetic data: preprocess -> train 2 epochs -> zero-shot eval.
-# Takes about a minute on a laptop CPU. Numbers it prints are meaningless;
-# what matters is that it finishes and reports 44950 trainable parameters.
-# Usage: bash scripts/smoke_test.sh [cpu|cuda]
+
 set -euo pipefail
 cd "$(dirname "$0")/.."
 DEVICE="${1:-cpu}"
@@ -16,13 +12,17 @@ python3 scripts/make_toy_data.py --name toy2 --seed 1 --items 450
 done)
 
 rm -rf res/toy res/toy2
-python3 main.py --dataset toy/toy --train_dir smoke_train --num_epochs 2 --epoch_test 1 $COMMON
-python3 main.py --dataset toy2/toy2 --train_dir smoke_zs \
-  --state_dict_path res/toy/toy/smoke_train/best.pth --transfer --inference_only $COMMON
+check() {
+  local name=$1 flags=$2 expected=$3
+  python3 main.py --dataset toy/toy --train_dir smoke_$name --num_epochs 2 --epoch_test 1 $COMMON $flags
+  python3 main.py --dataset toy2/toy2 --train_dir smoke_${name}_zs \
+    --state_dict_path res/toy/toy/smoke_$name/best.pth --transfer --inference_only $COMMON $flags
+  local params=$(cat res/toy/toy/smoke_$name/params.txt)
+  if [[ "$params" != "$expected" ]]; then
+    echo "SMOKE TEST FAILED: $name has $params trainable parameters, expected $expected"; exit 1
+  fi
+}
 
-params=$(cat res/toy/toy/smoke_train/params.txt)
-if [[ "$params" == "44950" ]]; then
-  echo "SMOKE TEST PASSED (44950 trainable parameters, matches thesis PrepRec)"
-else
-  echo "SMOKE TEST FAILED: $params trainable parameters, expected 44950"; exit 1
-fi
+check preprec "" 44950
+check apf "--apf" 45023
+echo "SMOKE TEST PASSED (PrepRec 44950, APF 45023 parameters)"

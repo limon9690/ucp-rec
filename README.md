@@ -6,8 +6,6 @@ user popularity profile and three personalization modules (MoPE, FiLM and APF), 
 model can adapt to each user's taste for popular or niche items without seeing the
 target domain during training.
 
-**Status:** PrepRec baseline pipeline working; UCP-Rec modules in progress.
-
 ## Setup
 
 Python 3.8 and PyTorch 1.10. Install the PyTorch build for your machine from

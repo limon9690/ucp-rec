@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import pdb
 from model_utils import *
+from ucp import APF, user_profile
 import random
 
 
@@ -26,6 +27,8 @@ class NewRec(torch.nn.Module):
         self.time_embed_concat = args.time_embed_concat
         self.use_week_eval = args.use_week_eval
         self.maxlen = args.maxlen
+        self.apf = APF() if args.apf else None
+        self.profile = None
 
         # takes in item id, outputs pre-processed time-sensitive item popularity
         # pdb.set_trace()
@@ -97,6 +100,9 @@ class NewRec(torch.nn.Module):
     def log2feats(self, users, log_seqs, time1_seqs, time2_seqs, time_embed):
         # obtain popularity-based feature vectors for sequence history, apply embedding layer, add positional encoding
         seqs = self.popularity_enc(log_seqs, time1_seqs, time2_seqs)
+        if self.apf is not None:
+            mask = torch.BoolTensor(log_seqs != 0).to(self.dev)
+            self.profile = user_profile(seqs, mask, self.maxlen)
         seqs = self.embed_layer(seqs)
         if self.fs_emb:
             seqs = self.fs_layer(seqs) 
@@ -179,15 +185,16 @@ class NewRec(torch.nn.Module):
         else:
             mod_time1, mod_time2 = time1_seqs[:,1:], time1_seqs[:,1:]
         # obtain popularity-based embeddings for positive and negative item sequences
-        pos_embs = self.embed_layer(
-            self.popularity_enc(pos_seqs, mod_time1, mod_time2)
-        )
-        neg_embs = self.embed_layer(
-            self.popularity_enc(neg_seqs, mod_time1, mod_time2)
-        )
+        pos_feats = self.popularity_enc(pos_seqs, mod_time1, mod_time2)
+        neg_feats = self.popularity_enc(neg_seqs, mod_time1, mod_time2)
+        pos_embs = self.embed_layer(pos_feats)
+        neg_embs = self.embed_layer(neg_feats)
 
         pos_logits = (full_feats * pos_embs).sum(dim=-1)
         neg_logits = (full_feats * neg_embs).sum(dim=-1)
+        if self.apf is not None:
+            pos_logits = self.apf(pos_logits, pos_feats, self.profile)
+            neg_logits = self.apf(neg_logits, neg_feats, self.profile)
 
         return pos_logits, neg_logits, full_feats[:, -1, :], pos_embed, neg_embed
 
@@ -202,6 +209,11 @@ class NewRec(torch.nn.Module):
         time1_seqs, time2_seqs = np.maximum(0, time1_seqs - 1 - self.lag // 4), np.maximum(0, time2_seqs - self.lag)
         pop_enc = self.popularity_enc(log_seqs, time1_seqs, time2_seqs).cpu()
         return pop_enc.numpy()
+
+    def reset_personalization(self):
+        # main.py applies Xavier init to every weight; personalization outputs start at zero
+        if self.apf is not None:
+            self.apf.reset_output()
 
     def user_score(self, log_seqs, time1_seqs, time2_seqs, time_embed, user):
         log_feats =  self.log2feats(user, log_seqs, time1_seqs, time2_seqs, time_embed)
@@ -222,19 +234,14 @@ class NewRec(torch.nn.Module):
 
         # apply most recent week popularity adjustment
         if self.use_week_eval:
-            item_embs = self.embed_layer(
-                self.eval_popularity_enc(
-                    item_indices, time1_pred, time2_pred, user
-                )
-            )
+            item_feats = self.eval_popularity_enc(item_indices, time1_pred, time2_pred, user)
         else:
-            item_embs = self.embed_layer(
-                self.popularity_enc(
-                    item_indices, time1_pred, time2_pred
-                )
-            )
+            item_feats = self.popularity_enc(item_indices, time1_pred, time2_pred)
+        item_embs = self.embed_layer(item_feats)
 
         logits = item_embs.matmul(final_feat.unsqueeze(-1)).squeeze(-1)
+        if self.apf is not None:
+            logits = self.apf(logits, item_feats, self.profile)
 
         return logits
 
