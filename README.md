@@ -1,15 +1,24 @@
 # UCP-Rec
 
 UCP-Rec (User-Conditioned Popularity Recommender) is a zero-shot cross-domain sequential
-recommender. It extends [PrepRec](https://github.com/CrowdDynamicsLab/preprec) with a
-user popularity profile and three personalization modules (MoPE, FiLM and APF), so the
-model can adapt to each user's taste for popular or niche items without seeing the
-target domain during training.
+recommender. Items are described only by how their popularity changes over time, so a
+model trained on one domain can be applied to another without retraining.
+
+Each user gets a small popularity profile computed from their history (how popular their
+items are, how much that varies, and whether it is trending up or down). The profile
+conditions three modules:
+
+- **MoPE** mixes embeddings of popularity over different time ranges.
+- **FiLM** scales and shifts the transformer's hidden states.
+- **APF** balances the transformer's score against a plain popularity score.
+
+This lets the model treat users who follow popular items differently from users with
+niche taste. This is the code for Chapter 3 of my master's thesis (Northeastern
+University, 2026).
 
 ## Setup
 
-Python 3.8 and PyTorch 1.10. Install the PyTorch build for your machine from
-[pytorch.org](https://pytorch.org/get-started/previous-versions/#v1101), then:
+Python 3.8 and PyTorch 1.10. then:
 
 ```bash
 pip install -r requirements.txt
@@ -53,7 +62,7 @@ python main.py --dataset douban/douban_movie --train_dir zs_from_office \
 
 Results and checkpoints are written to `res/<dataset>/<train_dir>/`.
 
-To run a full configuration (seeds 2023–2025, trained on Office, zero-shot on Tool, Movie,
+To run a full configuration (3 seeds, trained on Office, zero-shot on Tool, Movie,
 Music and Epinions) and get mean ± sd:
 
 ```bash
@@ -61,7 +70,18 @@ nohup bash scripts/run_variant.sh film > film.out 2>&1 &   # or preprec, apf, mo
 cat res/runs/film/summary.txt                              # when finished
 ```
 
-Seeds that already finished training are not retrained, only re-evaluated.
+## Results
+
+Trained on Amazon Office; Office is in-domain, the other four columns are zero-shot. NDCG@10 / HR@10, 100 sampled
+negatives per test item.
+
+| Model         | Params | Office        | Tool          | Movie         | Music         | Epinions      |
+| ------------- | ------ | ------------- | ------------- | ------------- | ------------- | ------------- |
+| PrepRec       | 44,950 | 0.336 / 0.532 | 0.308 / 0.473 | 0.613 / 0.814 | 0.474 / 0.679 | 0.429 / 0.629 |
+| APF only      | 45,023 | 0.334 / 0.532 | 0.323 / 0.520 | 0.702 / 0.881 | 0.541 / 0.748 | 0.495 / 0.674 |
+| FiLM only     | 48,614 | 0.336 / 0.535 | 0.330 / 0.531 | 0.698 / 0.881 | 0.526 / 0.738 | 0.494 / 0.664 |
+| MoPE only     | 72,466 | 0.333 / 0.527 | 0.308 / 0.487 | 0.677 / 0.863 | 0.538 / 0.742 | 0.492 / 0.665 |
+| UCP-Rec (all) | 76,203 | 0.336 / 0.534 | 0.326 / 0.521 | 0.682 / 0.867 | 0.539 / 0.743 | 0.491 / 0.670 |
 
 ## Notes
 
