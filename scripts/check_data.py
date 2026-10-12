@@ -1,5 +1,7 @@
 """Check preprocessed datasets against thesis Table 3.3 and record checksums.
 
+Counts are what training actually uses (after the loader's 40,000-user cap).
+
 Usage: python scripts/check_data.py [dataset ...]
        python scripts/check_data.py --verify   # compare against data/MANIFEST.md5
 
@@ -23,7 +25,8 @@ EXPECTED = {
     "douban/douban_music": (20539, 10121),
     "epinions/epinions": (30738, 20355),
 }
-CHECKSUMMED = ["_intwtime.csv", "_userneg.pickle", "_wtembed.npy", "_week_embed2.npy", "_week_wt_embed_adj.npy"]
+USER_CAP = 40000
+CHECKSUMMED = ["_int2.csv", "_intwtime.csv", "_userneg.pickle", "_wtembed.npy", "_week_embed2.npy", "_week_wt_embed_adj.npy"]
 MANIFEST = os.path.join(ROOT, "MANIFEST.md5")
 
 
@@ -43,12 +46,15 @@ args = parser.parse_args()
 sums, ok = {}, True
 for ds in args.datasets:
     base = os.path.join(ROOT, ds)
-    if not os.path.exists(base + "_intwtime.csv"):
+    if not os.path.exists(base + "_int2.csv"):
         print(f"MISSING  {ds} (not preprocessed)")
         ok = False
         continue
-    df = pd.read_csv(base + "_intwtime.csv", header=None)
-    users, items = df[0].nunique(), df[1].nunique()
+    df = pd.read_csv(base + "_int2.csv", header=None)
+    # count what training sees: data_partition_wtime (data.py) skips user ids
+    # >= 40000 (after +1), and takes itemnum as the largest remaining item id
+    df = df[df[0] + 1 < USER_CAP]
+    users, items = df[0].nunique(), int(df[1].max()) + 1
     negs = pickle.load(open(base + "_userneg.pickle", "rb"))
     neg_sizes = {len(v) for v in negs.values()}
     want = EXPECTED.get(ds)

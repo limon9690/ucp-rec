@@ -6,6 +6,7 @@ Numbers produced on it mean nothing.
 
 Output: data/<name>/<name>.csv with columns item,user,rate,time (unix seconds).
 """
+
 import argparse
 import os
 
@@ -23,8 +24,7 @@ rng = np.random.RandomState(args.seed)
 start = 1514764800  # 2018-01-01
 span = 2 * 365 * 24 * 3600  # two years, enough coarse periods for the popularity tables
 
-# Zipf-like item popularity whose ranking drifts over time, so the
-# popularity features are not constant.
+
 base = 1.0 / np.arange(1, args.items + 1) ** 0.8
 rows = []
 for u in range(args.users):
