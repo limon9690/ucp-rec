@@ -66,7 +66,7 @@ To run a full configuration (3 seeds, trained on Office, zero-shot on Tool, Movi
 Music and Epinions) and get mean ± sd:
 
 ```bash
-bash scripts/run_variant.sh film > film.out 2>&1 &   # or preprec, apf, mope, full, all
+bash scripts/run_variant.sh film   # or preprec, apf, mope, full, all
 ```
 
 The summary is printed at the end and saved to `res/runs/<variant>/summary.txt`. Seeds
