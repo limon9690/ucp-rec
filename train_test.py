@@ -141,6 +141,7 @@ def train_test(args, sampler, num_batch, model, dataset, epoch_start_idx, write,
                 # loss += args.reg_coef * model.regloss(
                 #     embed, pos_embed, neg_embed, args.triplet_loss, args.cos_loss
                 # )
+                loss += model.extra_loss(args)
                 loss.backward()
                 adam_optimizer.step()
                 print(

@@ -53,6 +53,16 @@ python main.py --dataset douban/douban_movie --train_dir zs_from_office \
 
 Results and checkpoints are written to `res/<dataset>/<train_dir>/`.
 
+To run a full configuration (seeds 2023–2025, trained on Office, zero-shot on Tool, Movie,
+Music and Epinions) and get mean ± sd:
+
+```bash
+nohup bash scripts/run_variant.sh film > film.out 2>&1 &   # or preprec, apf
+cat res/runs/film/summary.txt                              # when finished
+```
+
+Seeds that already finished training are not retrained, only re-evaluated.
+
 ## Acknowledgements
 
 Built on [PrepRec](https://github.com/CrowdDynamicsLab/preprec) by Junting Wang,

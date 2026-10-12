@@ -88,3 +88,35 @@ class APF(torch.nn.Module):
         a = self.alpha(profile)
         shallow = coarse_percentile(cand_feats) / 100
         return a * deep + (1 - a) * shallow
+
+
+class FiLM(torch.nn.Module):
+    """Profile-conditioned scale and shift on the transformer hidden states"""
+
+    def __init__(self, n_points, d_model, profile_dim=7, hidden=8):
+        super().__init__()
+        self.n_points = n_points
+        self.d_model = d_model
+        self.fc1 = torch.nn.Linear(profile_dim, hidden)
+        self.out = torch.nn.Linear(hidden, n_points * 2 * d_model)
+        self.reset_output()
+        self.deltas = None
+
+    def reset_output(self):
+        # zero deltas at the start, so the model begins as plain PrepRec
+        torch.nn.init.zeros_(self.out.weight)
+        torch.nn.init.zeros_(self.out.bias)
+
+    def set_profile(self, profile):
+        h = torch.relu(self.fc1(profile))
+        self.deltas = self.out(h).view(-1, self.n_points, 2, self.d_model)
+
+    def forward(self, x, point):
+        """x: (B, T, d) hidden states at modulation point `point`"""
+        d_gamma = self.deltas[:, point, 0].unsqueeze(1)
+        d_beta = self.deltas[:, point, 1].unsqueeze(1)
+        return (1 + d_gamma) * x + d_beta
+
+    def reg_loss(self):
+        # sum of squared deltas over all points, averaged over users
+        return self.deltas.pow(2).sum(dim=(1, 2, 3)).mean()

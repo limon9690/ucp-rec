@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import pdb
 from model_utils import *
-from ucp import APF, user_profile
+from ucp import APF, FiLM, user_profile
 import random
 
 
@@ -97,12 +97,20 @@ class NewRec(torch.nn.Module):
             new_fwd_layer = PointWiseFeedForward(self.hidden_units, args.dropout_rate)
             self.forward_layers.append(new_fwd_layer)
 
+        # built last and on a forked RNG, so the base layers get the same init as PrepRec
+        self.film = None
+        if args.film:
+            with torch.random.fork_rng(devices=[]):
+                self.film = FiLM(2 * args.num_blocks, self.hidden_units)
+
     def log2feats(self, users, log_seqs, time1_seqs, time2_seqs, time_embed):
         # obtain popularity-based feature vectors for sequence history, apply embedding layer, add positional encoding
         seqs = self.popularity_enc(log_seqs, time1_seqs, time2_seqs)
-        if self.apf is not None:
+        if self.apf is not None or self.film is not None:
             mask = torch.BoolTensor(log_seqs != 0).to(self.dev)
             self.profile = user_profile(seqs, mask, self.maxlen)
+        if self.film is not None:
+            self.film.set_profile(self.profile)
         seqs = self.embed_layer(seqs)
         if self.fs_emb:
             seqs = self.fs_layer(seqs) 
@@ -143,9 +151,13 @@ class NewRec(torch.nn.Module):
                 Q, seqs, time_mask=timeline_mask, attn_mask=attention_mask
             )
             seqs = Q + mha_outputs
+            if self.film is not None:
+                seqs = self.film(seqs, 2 * i)
 
             seqs = self.forward_layernorms[i](seqs)
             seqs = self.forward_layers[i](seqs)
+            if self.film is not None:
+                seqs = self.film(seqs, 2 * i + 1)
             seqs *= ~timeline_mask.unsqueeze(-1)
 
         # final layer to get user feature at each sequence position
@@ -214,6 +226,13 @@ class NewRec(torch.nn.Module):
         # main.py applies Xavier init to every weight; personalization outputs start at zero
         if self.apf is not None:
             self.apf.reset_output()
+        if self.film is not None:
+            self.film.reset_output()
+
+    def extra_loss(self, args):
+        if self.film is None:
+            return 0
+        return args.film_coef * self.film.reg_loss()
 
     def user_score(self, log_seqs, time1_seqs, time2_seqs, time_embed, user):
         log_feats =  self.log2feats(user, log_seqs, time1_seqs, time2_seqs, time_embed)

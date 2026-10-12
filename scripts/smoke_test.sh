@@ -23,6 +23,19 @@ check() {
   fi
 }
 
+# an untrained model with a zero-initialised module must score exactly like PrepRec
+same_as_preprec() {
+  local name=$1 flags=$2
+  python3 main.py --dataset toy/toy --train_dir init_preprec --inference_only $COMMON >/dev/null
+  python3 main.py --dataset toy/toy --train_dir init_$name --inference_only $COMMON $flags >/dev/null
+  if ! diff <(grep -A1 "Test results" res/toy/toy/init_preprec/log.txt) \
+            <(grep -A1 "Test results" res/toy/toy/init_$name/log.txt); then
+    echo "SMOKE TEST FAILED: untrained $name differs from PrepRec"; exit 1
+  fi
+}
+
 check preprec "" 44950
 check apf "--apf" 45023
-echo "SMOKE TEST PASSED (PrepRec 44950, APF 45023 parameters)"
+check film "--film" 48614
+same_as_preprec film "--film"
+echo "SMOKE TEST PASSED (PrepRec 44950, APF 45023, FiLM 48614 parameters; untrained FiLM = PrepRec)"

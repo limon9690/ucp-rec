@@ -123,6 +123,12 @@ def parse():
         "--apf", action="store_true", help="UCP-Rec adaptive popularity fusion"
     )
     parser.add_argument(
+        "--film", action="store_true", help="UCP-Rec profile-conditioned FiLM"
+    )
+    parser.add_argument(
+        "--film_coef", default=0.005, type=float, help="weight of the FiLM delta L2 loss"
+    )
+    parser.add_argument(
         "--keep_best",
         action="store_true",
         help="test and save the weights from the best validation epoch; upstream (and the thesis) used the final weights, because best_state aliased the live model",
