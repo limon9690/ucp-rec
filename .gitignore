@@ -7,8 +7,6 @@ runs/
 data/*
 !data/data.py
 !data/data_2.py
-!data/data_full.py
-!data/preprocess.sh
 !data/MANIFEST.md5
 .ipynb_checkpoints*
 venv/
