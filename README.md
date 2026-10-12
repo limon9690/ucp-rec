@@ -4,21 +4,13 @@ UCP-Rec (User-Conditioned Popularity Recommender) is a zero-shot cross-domain se
 recommender. Items are described only by how their popularity changes over time, so a
 model trained on one domain can be applied to another without retraining.
 
-Each user gets a small popularity profile computed from their history (how popular their
-items are, how much that varies, and whether it is trending up or down). The profile
-conditions three modules:
-
-- **MoPE** mixes embeddings of popularity over different time ranges.
-- **FiLM** scales and shifts the transformer's hidden states.
-- **APF** balances the transformer's score against a plain popularity score.
-
 This lets the model treat users who follow popular items differently from users with
-niche taste. This is the code for Chapter 3 of my master's thesis (Northeastern
+niche taste. This is the code for UCP-Rec, proposed in my master's thesis (Northeastern
 University, 2026).
 
 ## Setup
 
-Python 3.8 and PyTorch 1.10. then:
+Requires Python 3.8 and PyTorch 1.10. then:
 
 ```bash
 pip install -r requirements.txt
