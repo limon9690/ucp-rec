@@ -1,0 +1,21 @@
+.DS_Store
+*__pycache__*
+*_default/
+/run*
+/res*
+runs/
+data/*
+!data/data.py
+!data/data_2.py
+!data/data_full.py
+!data/preprocess.sh
+!data/MANIFEST.md5
+.ipynb_checkpoints*
+venv/
+
+# ucp-rec additions
+*.pth
+*.log
+nohup.out
+.venv/
+/autodl-tmp

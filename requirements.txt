@@ -1,0 +1,11 @@
+# Pinned to the thesis-era stack (Python 3.8). numpy 1.22 needs Python >= 3.8.
+# torch is installed separately because the right build depends on the machine:
+#   AutoDL: use the "PyTorch 1.10.0 / Python 3.8 / CUDA 11.3" image (torch preinstalled)
+#   local CPU: see environment.yml
+numpy==1.22.0
+pandas==1.4.2
+scipy==1.7.3
+scikit-learn==1.0.2
+matplotlib==3.4.3
+# torch 1.10 imports pkg_resources.packaging, which newer setuptools removed
+setuptools==59.5.0
