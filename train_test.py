@@ -6,6 +6,26 @@ from scipy.spatial import distance_matrix
 from utils import *
 
 
+# Checkpoint entries rebuilt from the dataset on every run; main.py already drops
+# them when loading a checkpoint. Upstream saved them anyway (several GB per file).
+DATA_KEYS = {
+    "popularity_enc.month_pop_table", "popularity_enc.week_pop_table",
+    "position_enc.pos_table", "user_enc.act_table", "time_position_enc.pos_table",
+    "eval_popularity_enc.week_eval_pop", "eval_popularity_enc.month_pop_table",
+    "eval_popularity_enc.week_pop_table",
+}
+
+
+def model_weights(model, snapshot=False):
+    """state_dict without the data tables.
+
+    snapshot=False returns the live tensors, like model.state_dict() does, so the
+    values keep changing as training continues (upstream behaviour).
+    """
+    return {k: (v.detach().clone() if snapshot else v)
+            for k, v in model.state_dict().items() if k not in DATA_KEYS}
+
+
 def train_test(args, sampler, num_batch, model, dataset, epoch_start_idx, write, usernegs, second, sampler2, num_batch2, model2, dataset2, usernegs2):
     f = open(os.path.join(write, "log.txt"), "w")
     adam_optimizer = torch.optim.Adam(
@@ -24,7 +44,7 @@ def train_test(args, sampler, num_batch, model, dataset, epoch_start_idx, write,
         user_feat = np.loadtxt(f"./data{args.dataset}_{args.reg_file}.txt")
 
     best_ndcg = 0
-    best_state = model.state_dict()
+    best_state = model_weights(model, args.keep_best)
     stop_early = 0
     if args.first_eval:
         model.eval()
@@ -264,10 +284,10 @@ def train_test(args, sampler, num_batch, model, dataset, epoch_start_idx, write,
 
             fname = f"epoch={epoch}.pth"
             if epoch % (args.epoch_test) == 0:
-                torch.save(model.state_dict(), os.path.join(write, fname))
+                torch.save(model_weights(model), os.path.join(write, fname))
             if ndcg > best_ndcg:
                 best_ndcg = ndcg
-                best_state = model.state_dict()
+                best_state = model_weights(model, args.keep_best)
                 stop_early = 0
             else:
                 stop_early += 1
