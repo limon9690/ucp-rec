@@ -1,6 +1,7 @@
 import sys
 import torch
 import numpy as np
+from array_io import load_array
 from collections import defaultdict, Counter
 from multiprocessing import Process, Queue
 from scipy.stats import rankdata
@@ -327,7 +328,7 @@ def evaluate(model, dataset, args, mode, usernegs, second=False):
 
     load = args.dataset2 if second else args.dataset
     if args.eval_quality:
-        userpop = np.loadtxt(f"./data{load}_{args.userpop}.txt")
+        userpop = load_array(f"./data{load}_{args.userpop}.txt")
         if load == "amazon/amazon_office":
             change_inds = np.random.choice(np.where(userpop==5)[0], userpop[userpop==5].size//2, replace=False)
             userpop[change_inds] = 5.5
@@ -350,7 +351,7 @@ def evaluate(model, dataset, args, mode, usernegs, second=False):
     evaluate = test if mode == "test" else valid
 
     if args.model == "mostpop":
-        misc = np.loadtxt(f"./data{load}_{args.rawpop}.txt")
+        misc = load_array(f"./data{load}_{args.rawpop}.txt")
     else:
         misc = None
 

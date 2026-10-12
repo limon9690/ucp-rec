@@ -5,6 +5,10 @@ from collections import Counter
 from scipy.stats import rankdata
 import argparse
 import pickle
+import sys
+import os.path as _osp
+sys.path.append(_osp.join(_osp.dirname(_osp.abspath(__file__)), '..'))  # for array_io; appended so data/data.py still wins over the root data.py
+from array_io import save_array, load_array
 from operator import itemgetter
 from multiprocessing import Pool
 
@@ -69,7 +73,7 @@ if __name__ == "__main__":
                 groups = [(u, group.item.values, itemnum, args.seed) for u, group in grouped]
                 usersneg = dict(pool.map(uniform_negs_per_user, groups))
             elif args.mode == "popularity":
-                lastpop = np.loadtxt(f"{dataset}_rawpop.txt")
+                lastpop = load_array(f"{dataset}_rawpop.txt")
                 groups = [(u, group.item.values, itemnum, lastpop, args.seed) for u, group in grouped]
                 usersneg = dict(pool.map(popularity_negs_per_user, groups))
         name = "userneg" if args.mode == "uniform" else "popneg"
@@ -81,10 +85,10 @@ if __name__ == "__main__":
         with open(f"{dataset}_userneg.pickle", 'rb') as handle:
             usernegs = pickle.load(handle)
         last = ao.groupby('user').last()
-        otmpw = np.loadtxt(f"{dataset}_week_curr_raw.txt")
+        otmpw = load_array(f"{dataset}_week_curr_raw.txt")
         by_period = {t: {'time': g['time'].values, 'item': g['item'].values} for t, g in ao.groupby('time6')}
         with Pool(processes=8) as pool:
             user_data = [(last.iloc[u], usernegs[u + 1], args.t2_size) for u in users]
             results = pool.map(process_user, user_data)
         df = np.concatenate(results)
-        np.savetxt(f"{dataset}_week_wt_embed_adj.txt", df)
+        save_array(f"{dataset}_week_wt_embed_adj.txt", df)

@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from array_io import load_array
 import torch
 import pdb
 import copy
@@ -305,11 +306,11 @@ class PopularityEncoding(torch.nn.Module):
         self.base_dim2 = args.base_dim2
         # table of fixed feature vectors for items by time, shape: (num_times*base_dim, num_items)
         if not second:
-            month_pop = np.loadtxt(f"./data/{args.dataset}_{args.monthpop}.txt")
-            week_pop = np.loadtxt(f"./data/{args.dataset}_{args.weekpop}.txt")
+            month_pop = load_array(f"./data/{args.dataset}_{args.monthpop}.txt")
+            week_pop = load_array(f"./data/{args.dataset}_{args.weekpop}.txt")
         else:
-            month_pop = np.loadtxt(f"./data/{args.dataset2}_{args.monthpop}.txt")
-            week_pop = np.loadtxt(f"./data/{args.dataset2}_{args.weekpop}.txt")
+            month_pop = load_array(f"./data/{args.dataset2}_{args.monthpop}.txt")
+            week_pop = load_array(f"./data/{args.dataset2}_{args.weekpop}.txt")
         # add zeros for the index-0 empty item placeholder and initial time period
         self.register_buffer(
             "month_pop_table",
@@ -396,9 +397,9 @@ class EvalPopularityEncoding(torch.nn.Module):
         self.base_dim2 = args.base_dim2
         self.pause = args.pause
         # table of fixed feature vectors for items by time, shape: (num_times*base_dim, num_items)
-        month_pop = np.loadtxt(f"./data/{args.dataset}_{args.monthpop}.txt")
-        week_pop = np.loadtxt(f"./data/{args.dataset}_{args.weekpop}.txt")
-        week_eval_pop = np.loadtxt(f"./data/{args.dataset}_{args.week_eval_pop}.txt")
+        month_pop = load_array(f"./data/{args.dataset}_{args.monthpop}.txt")
+        week_pop = load_array(f"./data/{args.dataset}_{args.weekpop}.txt")
+        week_eval_pop = load_array(f"./data/{args.dataset}_{args.week_eval_pop}.txt")
         self.register_buffer("week_eval_pop", torch.FloatTensor(week_eval_pop))
         # add zeros for the index-0 empty item placeholder and initial time period
         self.register_buffer(
