@@ -30,8 +30,12 @@ def popularity_negs_per_user(group):
     return user + 1, list(selected_items)
 
 def process_user(user_data):
-    last_u, userneg, otmpw, ao, t2_size = user_data
-    counter = Counter(ao[(ao['time6'] == last_u['time6']) & (ao['time'] < last_u['time'])]['item'])
+    # `by_period` and `otmpw` are module globals inherited by the forked
+    # workers. Upstream pickled the whole interaction table and popularity
+    # matrix into every task (once per user), which ran out of memory on Douban.
+    last_u, userneg, t2_size = user_data
+    period = by_period.get(last_u['time6'])
+    counter = Counter() if period is None else Counter(period['item'][period['time'] < last_u['time']])
     arr = np.array(userneg) - 1
     arr = np.insert(arr, 0, last_u['item'])
     counts = np.array(itemgetter(*arr)(counter))
@@ -78,8 +82,9 @@ if __name__ == "__main__":
             usernegs = pickle.load(handle)
         last = ao.groupby('user').last()
         otmpw = np.loadtxt(f"{dataset}_week_curr_raw.txt")
+        by_period = {t: {'time': g['time'].values, 'item': g['item'].values} for t, g in ao.groupby('time6')}
         with Pool(processes=8) as pool:
-            user_data = [(last.iloc[u], usernegs[u + 1], otmpw, ao, args.t2_size) for u in users]
+            user_data = [(last.iloc[u], usernegs[u + 1], args.t2_size) for u in users]
             results = pool.map(process_user, user_data)
         df = np.concatenate(results)
         np.savetxt(f"{dataset}_week_wt_embed_adj.txt", df)

@@ -7,6 +7,7 @@ The first run writes data/MANIFEST.md5 (commit it). Later runs with --verify
 confirm the evaluation data is byte-identical, which is what makes results
 comparable across machines.
 """
+
 import argparse
 import hashlib
 import os
@@ -15,7 +16,7 @@ import pickle
 import pandas as pd
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
-# Thesis Table 3.3 (users, items)
+
 EXPECTED = {
     "amazon/amazon_office": (39999, 25898),
     "amazon/amazon_tool": (39999, 70903),
@@ -23,7 +24,13 @@ EXPECTED = {
     "douban/douban_music": (20539, 10121),
     "epinions/epinions": (30738, 20355),
 }
-CHECKSUMMED = ["_intwtime.csv", "_userneg.pickle", "_wtembed.txt", "_week_embed2.txt", "_week_wt_embed_adj.txt"]
+CHECKSUMMED = [
+    "_intwtime.csv",
+    "_userneg.pickle",
+    "_wtembed.txt",
+    "_week_embed2.txt",
+    "_week_wt_embed_adj.txt",
+]
 MANIFEST = os.path.join(ROOT, "MANIFEST.md5")
 
 
@@ -56,7 +63,9 @@ for ds in args.datasets:
     ok &= match
     tag = "OK      " if match else "MISMATCH"
     exp = f"  (thesis: {want[0]:,} / {want[1]:,})" if want else ""
-    print(f"{tag} {ds:<24} users {users:,}  items {items:,}{exp}  negatives/user {sorted(neg_sizes)}")
+    print(
+        f"{tag} {ds:<24} users {users:,}  items {items:,}{exp}  negatives/user {sorted(neg_sizes)}"
+    )
     for suf in CHECKSUMMED:
         p = base + suf
         if os.path.exists(p):

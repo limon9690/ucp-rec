@@ -1,9 +1,3 @@
-#!/usr/bin/env bash
-# Preprocess the five datasets (CPU only; run in AutoDL's no-GPU mode to save money).
-# Needs the raw CSVs from the PrepRec Google Drive folder in place first:
-#   data/amazon/amazon_office.csv   data/amazon/amazon_tool.csv
-#   data/douban/douban_movie.csv    data/douban/douban_music.csv
-#   data/epinions/epinions.csv
 # Usage: bash scripts/prepare_data.sh [dataset ...]   (default: all five)
 set -euo pipefail
 cd "$(dirname "$0")/../data"
@@ -16,7 +10,6 @@ for ds in $DATASETS; do
   [[ -f "$ds.csv" ]] || { echo "missing data/$ds.csv"; exit 1; }
   echo "== $ds"
   if [[ "$ds" == "amazon/amazon_tool" ]]; then
-    # upstream preprocess.sh: no cutoff overrides for Tool, intentionally
     python3 data.py --dataset "./$ds"
   else
     python3 data.py --dataset "./$ds" --t1_cutoff 10 --t2_cutoff 2
