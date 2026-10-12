@@ -55,13 +55,13 @@ elif args.model in no_use_time_track_len:
     [user_train, user_valid, user_test, usernum, itemnum, userlens] = dataset
 elif args.model in use_time:
     if args.time_embed:
-        dataset = data_partition_wtime(args.dataset, args.maxlen, args.sparse_name if args.sparse else '', args.override_sparse, args.time_df_mod)
+        dataset = data_partition_wtime(args.dataset, args.maxlen, args.sparse_name if args.sparse else '', args.override_sparse, args.time_df_mod, args.user_cap)
     else:
         dataset = data_partition(args.dataset, args.maxlen, args.sparse_name if args.sparse else '', args.override_sparse, args.time_df_mod)
     [user_train, user_valid, user_test, usernum, itemnum] = dataset
     if args.dataset2 != "":
         if args.time_embed:
-            dataset2 = data_partition_wtime(args.dataset2, args.maxlen, args.sparse_name if args.sparse else '', args.override_sparse, args.time_df_mod)
+            dataset2 = data_partition_wtime(args.dataset2, args.maxlen, args.sparse_name if args.sparse else '', args.override_sparse, args.time_df_mod, args.user_cap)
         else:
             dataset2 = data_partition(args.dataset2, args.maxlen, args.sparse_name if args.sparse else '', args.override_sparse, args.time_df_mod)
         [user_train2, user_valid2, user_test2, usernum2, itemnum2] = dataset2
@@ -75,6 +75,12 @@ with open(f"./data/{args.dataset}_{userneg_mod}{args.userneg}.pickle", 'rb') as 
 if second:
     with open(f"./data/{args.dataset2}_{userneg_mod}{args.userneg}.pickle", 'rb') as handle:
         usernegs2 = pickle.load(handle)
+
+# keep negatives only for users inside the cap (evaluation pairs them with users 1..usernum)
+if args.user_cap:
+    usernegs = {u: v for u, v in usernegs.items() if u < args.user_cap}
+    if second:
+        usernegs2 = {u: v for u, v in usernegs2.items() if u < args.user_cap}
 
 print(f"done loading data for {args.dataset}!")
 

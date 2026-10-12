@@ -10,7 +10,7 @@ import math
 from scipy.stats import rankdata, percentileofscore
 
 
-def data_partition_wtime(fname, maxlen, sparse_name="", override_sparse=False, mod=""):
+def data_partition_wtime(fname, maxlen, sparse_name="", override_sparse=False, mod="", user_cap=0):
     """
     dataset pre-processing that uses coarse time index, fine time index, and relative time embedding via exact timestamp
     refer to data/data.py for dataset formatting
@@ -27,6 +27,9 @@ def data_partition_wtime(fname, maxlen, sparse_name="", override_sparse=False, m
     for line in f:
         u, i, t, t2, te = line.rstrip().split(",")
         u = int(u) + 1
+        # same rule as data_partition's hardcoded cap: keep user ids 1..user_cap-1
+        if user_cap and u >= user_cap:
+            continue
         i = int(i) + 1
         t = int(t)
         t2 = int(t2)

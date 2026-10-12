@@ -44,6 +44,7 @@ def parse():
     # without them --use_week_eval and --state_dict_path (zero-shot transfer) crash
     parser.add_argument('--pause', action='store_true', help='debug breakpoints (upstream leftover)')
     parser.add_argument('--fs_emb_2', action='store_true', help='upstream leftover, unused')
+    parser.add_argument('--user_cap', default=40000, type=int, help='use only user ids below this (thesis: 40000, giving 39,999 users); 0 = all users')
     parser.add_argument('--n_workers', default=4, type=int, help='sampler processes (upstream fixed 4; changing it changes the batch stream)')
     parser.add_argument('--topk','--list', nargs='+', default=[10, 5, 1], type=int, help='# items for evaluation')
     parser.add_argument('--augment', action='store_true', help='use data augmentation, newrec only')
